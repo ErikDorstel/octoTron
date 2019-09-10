@@ -4,7 +4,7 @@ Polyphonic Teensy 3.6 Synthesizer with MIDI Control
 
 The Synthesizer has the following characteristics:
 
-    * eight voices
-    * two lfo per voice
-    * two vco per voice
+    *eight voices
+    *two lfo per voice
+    *two vco per voice
     
