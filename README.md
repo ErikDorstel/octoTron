@@ -1,10 +1,11 @@
 # octoTron
 Polyphonic Teensy 3.6 Synthesizer with MIDI Control
-### This project implement a Teensy 3.6 based Synthesizer with two MIDI Inputs.
+### This project implement a Teensy 3.6 based Synthesizer with two MIDI inputs.
 The Synthesizer has the following characteristics:
 * eight voices
-* two LFO per voice
-* two VCO per voice
-* one filter (lowpass,highpass,bandpass) per voice
+* two LFO (sine,sawtooth,square,triangle) per voice
+* two VCO (sine,sawtooth,square,triangle) per voice
+* one 12dB filter (lowpass,highpass,bandpass) per voice
+* one AHDSR generator per voice
 * one MIDI input for a MIDI keyboard
-* one MIDI input for a MIDI controller like 
+* one MIDI input for a MIDI controller like https://github.com/ErikDorstel/midiKnobs
