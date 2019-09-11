@@ -12,4 +12,4 @@ The Synthesizer has the following characteristics:
 
 The project uses the Teensy Audio Library to implement the synthesizer components like VCO, LFO ... . This graphic shows the connections of the components used.
 ![Alt. Text](https://raw.githubusercontent.com/ErikDorstel/octoTron/master/documentation/ADT%20schematic.png)
-The hardware used is very similar to
+The hardware used is very similar to https://github.com/ErikDorstel/stringFlow . The only difference is the use of a second MIDI in port to connect a MIDI controller.
