@@ -10,3 +10,4 @@ The Synthesizer has the following characteristics:
 * one MIDI input for a MIDI keyboard
 * one MIDI input for a MIDI controller like https://github.com/ErikDorstel/midiKnobs
 The project uses the Teensy Audio Library to implement the synthesizer components like VCO, LFO ... . This graphic shows the connections of the components used.
+![](https://raw.githubusercontent.com/ErikDorstel/octoTron/master/documentation/ADT%20schematic.png)
