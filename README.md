@@ -12,4 +12,7 @@ The Synthesizer has the following characteristics:
 
 The project uses the Teensy Audio Library to implement the synthesizer components like VCO, LFO ... . This graphic shows the connections of the components used.
 ![Alt. Text](https://raw.githubusercontent.com/ErikDorstel/octoTron/master/documentation/ADT%20schematic.png)
+
+The source uses a new function within the audio library. To restart a LFO with an absolut phase angle the file synth_waveform.h must modified. This pull request contains the changes. https://github.com/PaulStoffregen/Audio/pull/275
+
 The hardware used is very similar to https://github.com/ErikDorstel/stringFlow . The only difference is the use of a second MIDI in port to connect a MIDI controller.
