@@ -15,4 +15,4 @@ The project uses the Teensy Audio Library to implement the synthesizer component
 
 The source code from octoTron uses a new feature in the audio library. To restart an LFO with an absolute phase angle, the file synth_waveform.h must be changed. This pull request contains the changes needed https://github.com/PaulStoffregen/Audio/pull/275 .
 
-The hardware used is very similar to https://github.com/ErikDorstel/stringFlow . The only difference is the use of a second MIDI In port. The octoTron Synthesizer use this second MIDI In port to connect a MIDI controller.
+The hardware used is very similar to https://github.com/ErikDorstel/stringFlow . The only difference is the use of a second MIDI In port. The octoTron Synthesizer use this second MIDI In port to connect a MIDI controller. The assigned MIDI controller numbers are part of the documentation.
