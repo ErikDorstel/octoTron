@@ -180,7 +180,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==4) { setAHDSRrelease(fvalue*1500); }
   if (control==7) { setVCO1amp(fvalue); setVCO2amp(fvalue); }
   if (control==8) {
-	  if ((value&96)==0) { setVCO1wave(WAVEFORM_SINE); }
+    if ((value&96)==0) { setVCO1wave(WAVEFORM_SINE); }
     if ((value&96)==32) { setVCO1wave(WAVEFORM_SAWTOOTH); }
     if ((value&96)==64) { setVCO1wave(WAVEFORM_SQUARE); }
     if ((value&96)==96) { setVCO1wave(WAVEFORM_TRIANGLE); } }
