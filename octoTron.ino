@@ -161,12 +161,10 @@ void loop() {
 
 void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=mountVoice(tone);
-  freqVCO1=(pow(2,(float(tone)-69)/12))*440; freqVCO2=freqVCO1*pow(2,(potVCO2freq*2)-1);
   if (voice!=255) {
-    AudioNoInterrupts();
-    lfovco[voice].restart(); lfofilt[voice].restart();
-    vco1[voice].frequency(freqVCO1); vco2[voice].frequency(freqVCO2); ahdsr[voice].noteOn();
-    AudioInterrupts(); } }
+    freqVCO1=(pow(2,(float(tone)-69)/12))*440; freqVCO2=freqVCO1*pow(2,(potVCO2freq*2)-1);
+    AudioNoInterrupts(); lfovco[voice].restart(); lfofilt[voice].restart(); AudioInterrupts();
+    vco1[voice].frequency(freqVCO1); vco2[voice].frequency(freqVCO2); ahdsr[voice].noteOn(); } }
 
 void MIDIsetNoteOff(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=unmountVoice(tone); if (voice!=255) { ahdsr[voice].noteOff(); } }
