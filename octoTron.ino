@@ -163,8 +163,8 @@ void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=mountVoice(tone);
   if (voice!=255) {
     freqVCO1=(pow(2,(float(tone)-69)/12))*440; freqVCO2=freqVCO1*pow(2,(potVCO2freq*2)-1);
-    AudioNoInterrupts(); lfovco[voice].restart(); lfofilt[voice].restart(); AudioInterrupts();
-    vco1[voice].frequency(freqVCO1); vco2[voice].frequency(freqVCO2); ahdsr[voice].noteOn(); } }
+    AudioNoInterrupts(); lfovco[voice].restart(); lfofilt[voice].restart();
+    vco1[voice].frequency(freqVCO1); vco2[voice].frequency(freqVCO2); AudioInterrupts(); ahdsr[voice].noteOn(); } }
 
 void MIDIsetNoteOff(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=unmountVoice(tone); if (voice!=255) { ahdsr[voice].noteOff(); } }
@@ -202,7 +202,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     if ((value&96)==32) { setLFOvcowave(WAVEFORM_SAWTOOTH); }
     if ((value&96)==64) { setLFOvcowave(WAVEFORM_SQUARE); }
     if ((value&96)==96) { setLFOvcowave(WAVEFORM_TRIANGLE); } }
-  if (control==17) { setLFOvcophase(fvalue*360); }
+  if (control==17) { AudioNoInterrupts(); setLFOvcophase(fvalue*360); AudioInterrupts(); }
   if (control==18) { setLFOvcoamp(fvalue); }
   if (control==19) { setLFOvcofreq(fvalue*10); }
   if (control==24) {
@@ -210,7 +210,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     if ((value&96)==32) { setLFOfiltwave(WAVEFORM_SAWTOOTH); }
     if ((value&96)==64) { setLFOfiltwave(WAVEFORM_SQUARE); }
     if ((value&96)==96) { setLFOfiltwave(WAVEFORM_TRIANGLE); } }
-  if (control==25) { setLFOfiltphase(fvalue*360); }
+  if (control==25) { AudioNoInterrupts(); setLFOfiltphase(fvalue*360); AudioInterrupts(); }
   if (control==26) { setLFOfiltamp(fvalue); }
   if (control==27) { setLFOfiltfreq(fvalue*10); }
   if (control==28) { setFiltfreq(fvalue*1000); }
