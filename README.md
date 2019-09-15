@@ -7,6 +7,7 @@ The Synthesizer has the following characteristics:
 * two VCO (sine,sawtooth,square,triangle) per voice
 * one 12dB filter (lowpass,highpass,bandpass) per voice
 * one AHDSR generator per voice
+* glissando effect
 * one MIDI input for a MIDI keyboard
 * one MIDI input for a MIDI controller like https://github.com/ErikDorstel/midiKnobs
 
