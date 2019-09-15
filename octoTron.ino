@@ -1,4 +1,5 @@
 #include <Audio.h>
+#include <Metro.h>
 
 AudioSynthWaveform       lfovco[9];
 AudioSynthWaveform       lfofilt[9];
@@ -114,9 +115,18 @@ AudioConnection          patchCord99(mix58, 0, mix18, 1);
 AudioConnection          patchCord100(mix14, 0, mix18, 0);
 AudioControlSGTL5000     sgtl5000_1;
 
+// mount voices for polyphony
 byte voiceTone[9]; byte voiceAge[9]; byte currentAge=8;
+// mixing filters
 float potFiltmixthru; float potFiltmixlow; float potFiltmixband; float potFiltmixhigh; float potFiltmixsum;
-float freqVCO1; float freqVCO2; float potVCO2freq;
+// frequency shift vco2
+float potVCO2freq;
+// glissando parameters
+float oldfreqVCO1[9]; float newfreqVCO1[9]; float curfreqVCO1[9];
+float oldfreqVCO2[9]; float newfreqVCO2[9]; float curfreqVCO2[9];
+Metro glissando = Metro(5); float potGlissspeed; byte lastVoice;
+// to prevent restart oscillator
+byte waveVCO1; byte waveVCO2; byte waveLFOvco; byte waveLFOfilt;
 
 void setup() {
   Serial1.begin(31250,SERIAL_8N1);
@@ -132,10 +142,10 @@ void setup() {
   setFiltmix(0,0,1,0);
   setAHDSR(4,2.5,35,1,500);
   setFilt(200,4,7);
-  setVCO1(1,800,WAVEFORM_TRIANGLE,1);
-  setVCO2(1,800,WAVEFORM_SQUARE,1);
-  setLFOvco(0,10,WAVEFORM_TRIANGLE);
-  setLFOfilt(0,10,WAVEFORM_TRIANGLE);
+  setVCO1(1,800,WAVEFORM_SINE,1);
+  setVCO2(1,800,WAVEFORM_SINE,1);
+  setLFOvco(0,10,WAVEFORM_SINE);
+  setLFOfilt(0,10,WAVEFORM_SINE);
   delay(700); }
 
 void loop() {
@@ -157,19 +167,40 @@ void loop() {
       // if (MIDIstatusB==0x90) { MIDIsetNoteOn(MIDIchannelB,MIDIpara1B,MIDIpara2B); }
       if (MIDIstatusB==0xB0) { MIDIsetControl(MIDIchannelB,MIDIpara1B,MIDIpara2B); }
       if (MIDIstatusB==0xE0) { MIDIsetPitchbend(MIDIchannelB,MIDIpara1B+(128*MIDIpara2B)); }
-      MIDIpara1B=255; MIDIpara2B=255; } } } }
+      MIDIpara1B=255; MIDIpara2B=255; } } }
+      
+  if (glissando.check() == 1 and potGlissspeed > 1) { doGlissando(); } }
 
 void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=mountVoice(tone);
   if (voice!=255) {
-    freqVCO1=(pow(2,(float(tone)-69)/12))*440; freqVCO2=freqVCO1*pow(2,(potVCO2freq*2)-1);
-    AudioNoInterrupts(); lfovco[voice].restart(); lfofilt[voice].restart();
-    vco1[voice].frequency(freqVCO1); vco2[voice].frequency(freqVCO2); AudioInterrupts(); ahdsr[voice].noteOn(); } }
+    AudioNoInterrupts();
+    lfovco[voice].restart(); lfofilt[voice].restart();
+    newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*pow(2,(potVCO2freq*2)-1);
+    if (potGlissspeed > 1) {
+      curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
+      curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice];
+      vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
+      glissando.interval(5); }
+    else {
+      curfreqVCO1[voice]=newfreqVCO1[voice]; oldfreqVCO1[voice]=newfreqVCO1[voice];
+      curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice];
+      vco1[voice].frequency(newfreqVCO1[voice]); vco2[voice].frequency(newfreqVCO2[voice]); }
+    AudioInterrupts();
+    ahdsr[voice].noteOn(); lastVoice=voice; } }
 
 void MIDIsetNoteOff(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=unmountVoice(tone); if (voice!=255) { ahdsr[voice].noteOff(); } }
 
+void doGlissando() {
+  for (byte voice=1;voice<=8;voice++) {
+    if ((oldfreqVCO1[voice] < newfreqVCO1[voice] and curfreqVCO1[voice] < newfreqVCO1[voice]) or (oldfreqVCO1[voice] > newfreqVCO1[voice] and curfreqVCO1[voice] > newfreqVCO1[voice])) {
+      curfreqVCO1[voice]=curfreqVCO1[voice]*pow(newfreqVCO1[voice]/oldfreqVCO1[voice],(1/potGlissspeed));
+      curfreqVCO2[voice]=curfreqVCO2[voice]*pow(newfreqVCO2[voice]/oldfreqVCO2[voice],(1/potGlissspeed));
+      vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); } } }
+
 void MIDIsetControl(byte channel, byte control, byte value) {
+  Serial.print(control); Serial.print(" "); Serial.println(value);
   float fvalue; fvalue=float(value)/127;
   if (control==0) { setAHDSRattack(fvalue*1500); }
   if (control==1) { setAHDSRhold(fvalue*1500); }
@@ -178,17 +209,19 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==4) { setAHDSRrelease(fvalue*1500); }
   if (control==7) { setVCO1amp(fvalue); setVCO2amp(fvalue); }
   if (control==8) {
-    if ((value&96)==0) { setVCO1wave(WAVEFORM_SINE); }
-    if ((value&96)==32) { setVCO1wave(WAVEFORM_SAWTOOTH); }
-    if ((value&96)==64) { setVCO1wave(WAVEFORM_SQUARE); }
-    if ((value&96)==96) { setVCO1wave(WAVEFORM_TRIANGLE); } }
+    if ((value&96)==0) { if (waveVCO1 != WAVEFORM_SINE) { setVCO1wave(WAVEFORM_SINE); waveVCO1=WAVEFORM_SINE; } }
+    if ((value&96)==32) { if (waveVCO1 != WAVEFORM_SAWTOOTH) { setVCO1wave(WAVEFORM_SAWTOOTH); waveVCO1=WAVEFORM_SAWTOOTH; } }
+    if ((value&96)==64) { if (waveVCO1 != WAVEFORM_SQUARE) { setVCO1wave(WAVEFORM_SQUARE); waveVCO1=WAVEFORM_SQUARE; } }
+    if ((value&96)==96) { if (waveVCO1 != WAVEFORM_TRIANGLE) { setVCO1wave(WAVEFORM_TRIANGLE); waveVCO1=WAVEFORM_TRIANGLE; } } }
   if (control==9) {
-    if ((value&96)==0) { setVCO2wave(WAVEFORM_SINE); }
-    if ((value&96)==32) { setVCO2wave(WAVEFORM_SAWTOOTH); }
-    if ((value&96)==64) { setVCO2wave(WAVEFORM_SQUARE); }
-    if ((value&96)==96) { setVCO2wave(WAVEFORM_TRIANGLE); } }
+    if ((value&96)==0) { if (waveVCO2 != WAVEFORM_SINE) { setVCO2wave(WAVEFORM_SINE); waveVCO2=WAVEFORM_SINE; } }
+    if ((value&96)==32) { if (waveVCO2 != WAVEFORM_SAWTOOTH) { setVCO2wave(WAVEFORM_SAWTOOTH); waveVCO2=WAVEFORM_SAWTOOTH; } }
+    if ((value&96)==64) { if (waveVCO2 != WAVEFORM_SQUARE) { setVCO2wave(WAVEFORM_SQUARE); waveVCO2=WAVEFORM_SQUARE; } }
+    if ((value&96)==96) { if (waveVCO2 != WAVEFORM_TRIANGLE) { setVCO2wave(WAVEFORM_TRIANGLE); waveVCO2=WAVEFORM_TRIANGLE; } } }
   if (control==10) { setVCOmix(1-fvalue,fvalue); }
-  if (control==11) { potVCO2freq=fvalue; freqVCO2=freqVCO1*pow(2,(potVCO2freq*2)-1); setVCO2freq(freqVCO2); }
+  if (control==11) { potVCO2freq=fvalue; for (byte v=1;v<=8;v++) {
+    newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); curfreqVCO2[v]=curfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); oldfreqVCO2[v]=oldfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
+    if (potGlissspeed > 1) { vco2[v].frequency(curfreqVCO2[v]); } else { vco2[v].frequency(newfreqVCO2[v]); } } }
   if (control==12) { potFiltmixthru=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
     setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); }
   if (control==13) { potFiltmixlow=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
@@ -198,23 +231,24 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==15) { potFiltmixhigh=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
     setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); }
   if (control==16) {
-    if ((value&96)==0) { setLFOvcowave(WAVEFORM_SINE); }
-    if ((value&96)==32) { setLFOvcowave(WAVEFORM_SAWTOOTH); }
-    if ((value&96)==64) { setLFOvcowave(WAVEFORM_SQUARE); }
-    if ((value&96)==96) { setLFOvcowave(WAVEFORM_TRIANGLE); } }
+    if ((value&96)==0) { if (waveLFOvco != WAVEFORM_SINE) { setLFOvcowave(WAVEFORM_SINE); waveLFOvco=WAVEFORM_SINE; } }
+    if ((value&96)==32) { if (waveLFOvco != WAVEFORM_SAWTOOTH) { setLFOvcowave(WAVEFORM_SAWTOOTH); waveLFOvco=WAVEFORM_SAWTOOTH; } }
+    if ((value&96)==64) { if (waveLFOvco != WAVEFORM_SQUARE) { setLFOvcowave(WAVEFORM_SQUARE); waveLFOvco=WAVEFORM_SQUARE; } }
+    if ((value&96)==96) { if (waveLFOvco != WAVEFORM_TRIANGLE) { setLFOvcowave(WAVEFORM_TRIANGLE); waveLFOvco=WAVEFORM_TRIANGLE; } } }
   if (control==17) { AudioNoInterrupts(); setLFOvcophase(fvalue*360); AudioInterrupts(); }
   if (control==18) { setLFOvcoamp(fvalue); }
   if (control==19) { setLFOvcofreq(fvalue*10); }
   if (control==24) {
-    if ((value&96)==0) { setLFOfiltwave(WAVEFORM_SINE); }
-    if ((value&96)==32) { setLFOfiltwave(WAVEFORM_SAWTOOTH); }
-    if ((value&96)==64) { setLFOfiltwave(WAVEFORM_SQUARE); }
-    if ((value&96)==96) { setLFOfiltwave(WAVEFORM_TRIANGLE); } }
+    if ((value&96)==0) { if (waveLFOfilt != WAVEFORM_SINE) { setLFOfiltwave(WAVEFORM_SINE); waveLFOfilt=WAVEFORM_SINE; } }
+    if ((value&96)==32) { if (waveLFOfilt != WAVEFORM_SAWTOOTH) { setLFOfiltwave(WAVEFORM_SAWTOOTH); waveLFOfilt=WAVEFORM_SAWTOOTH; } }
+    if ((value&96)==64) { if (waveLFOfilt != WAVEFORM_SQUARE) { setLFOfiltwave(WAVEFORM_SQUARE); waveLFOfilt=WAVEFORM_SQUARE; } }
+    if ((value&96)==96) { if (waveLFOfilt != WAVEFORM_TRIANGLE) { setLFOfiltwave(WAVEFORM_TRIANGLE); waveLFOfilt=WAVEFORM_TRIANGLE; } } }
   if (control==25) { AudioNoInterrupts(); setLFOfiltphase(fvalue*360); AudioInterrupts(); }
   if (control==26) { setLFOfiltamp(fvalue); }
   if (control==27) { setLFOfiltfreq(fvalue*10); }
   if (control==28) { setFiltfreq(fvalue*1000); }
-  if (control==29) { setFiltres((fvalue*5.7)-0.7); } }
+  if (control==29) { setFiltres((fvalue*5.7)-0.7); }
+  if (control==31) { potGlissspeed=(fvalue*99)+1; } }
 
 void MIDIsetPitchbend(byte channel, word pitch) { }
 
