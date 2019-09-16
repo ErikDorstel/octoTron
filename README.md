@@ -8,6 +8,7 @@ The Synthesizer has the following characteristics:
 * one 12dB filter (lowpass,highpass,bandpass) per voice
 * one AHDSR generator per voice
 * glissando effect
+* keyboard velocity
 * one MIDI input for a MIDI keyboard
 * one MIDI input for a MIDI controller like https://github.com/ErikDorstel/midiKnobs
 
