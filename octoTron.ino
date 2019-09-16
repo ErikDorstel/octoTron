@@ -119,6 +119,8 @@ AudioControlSGTL5000     sgtl5000_1;
 byte voiceTone[9]; byte voiceAge[9]; byte currentAge=8;
 // mixing filters
 float potFiltmixthru; float potFiltmixlow; float potFiltmixband; float potFiltmixhigh; float potFiltmixsum;
+// velocity
+float potVCOamp; float veloVCO[9];
 // frequency shift vco2
 float potVCO2freq;
 // glissando parameters
@@ -138,15 +140,15 @@ void setup() {
   mix14.gain(0,0.25); mix14.gain(1,0.25); mix14.gain(2,0.25); mix14.gain(3,0.25);
   mix58.gain(0,0.25); mix58.gain(1,0.25); mix58.gain(2,0.25); mix58.gain(3,0.25);
   mix18.gain(0,0.5); mix18.gain(1,0.5); mix18.gain(2,0); mix18.gain(3,0);
-  setVCOmix(0.7,0.3);
-  setFiltmix(0,0,1,0);
-  setAHDSR(4,2.5,35,1,500);
-  setFilt(200,4,7);
-  setVCO1(1,800,WAVEFORM_SINE,1);
-  setVCO2(1,800,WAVEFORM_SINE,1);
+  setVCOmix(0.5,0.5);
+  setFiltmix(1,0,0,0);
+  setAHDSR(0,500,500,1,500);
+  setFilt(440,4,7);
+  setVCO1(0,440,WAVEFORM_SINE,1);
+  setVCO2(0,440,WAVEFORM_SINE,1);
   setLFOvco(0,10,WAVEFORM_SINE);
   setLFOfilt(0,10,WAVEFORM_SINE);
-  delay(700); }
+  delay(1000); }
 
 void loop() {
   byte MIDIinA; static byte MIDIstatusA=0; static byte MIDIchannelA=0; static byte MIDIpara1A=0; static byte MIDIpara2A=0;
@@ -181,11 +183,12 @@ void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
       curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice];
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
-      glissando.interval(5); }
+      glissando.interval(5); glissando.reset(); }
     else {
       curfreqVCO1[voice]=newfreqVCO1[voice]; oldfreqVCO1[voice]=newfreqVCO1[voice];
       curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice];
-      vco1[voice].frequency(newfreqVCO1[voice]); vco2[voice].frequency(newfreqVCO2[voice]); }
+      vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); }
+    veloVCO[voice]=(float(velocity)/127*0.9)+0.1; vco1[voice].amplitude(veloVCO[voice]*potVCOamp); vco2[voice].amplitude(veloVCO[voice]*potVCOamp);
     AudioInterrupts();
     ahdsr[voice].noteOn(); lastVoice=voice; } }
 
@@ -200,14 +203,13 @@ void doGlissando() {
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); } } }
 
 void MIDIsetControl(byte channel, byte control, byte value) {
-  Serial.print(control); Serial.print(" "); Serial.println(value);
   float fvalue; fvalue=float(value)/127;
   if (control==0) { setAHDSRattack(fvalue*1500); }
   if (control==1) { setAHDSRhold(fvalue*1500); }
   if (control==2) { setAHDSRdecay(fvalue*1500); }
   if (control==3) { setAHDSRsustain(fvalue); }
   if (control==4) { setAHDSRrelease(fvalue*1500); }
-  if (control==7) { setVCO1amp(fvalue); setVCO2amp(fvalue); }
+  if (control==7) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } }
   if (control==8) {
     if ((value&96)==0) { if (waveVCO1 != WAVEFORM_SINE) { setVCO1wave(WAVEFORM_SINE); waveVCO1=WAVEFORM_SINE; } }
     if ((value&96)==32) { if (waveVCO1 != WAVEFORM_SAWTOOTH) { setVCO1wave(WAVEFORM_SAWTOOTH); waveVCO1=WAVEFORM_SAWTOOTH; } }
@@ -219,9 +221,8 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     if ((value&96)==64) { if (waveVCO2 != WAVEFORM_SQUARE) { setVCO2wave(WAVEFORM_SQUARE); waveVCO2=WAVEFORM_SQUARE; } }
     if ((value&96)==96) { if (waveVCO2 != WAVEFORM_TRIANGLE) { setVCO2wave(WAVEFORM_TRIANGLE); waveVCO2=WAVEFORM_TRIANGLE; } } }
   if (control==10) { setVCOmix(1-fvalue,fvalue); }
-  if (control==11) { potVCO2freq=fvalue; for (byte v=1;v<=8;v++) {
-    newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); curfreqVCO2[v]=curfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); oldfreqVCO2[v]=oldfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
-    if (potGlissspeed > 1) { vco2[v].frequency(curfreqVCO2[v]); } else { vco2[v].frequency(newfreqVCO2[v]); } } }
+  if (control==11) { potVCO2freq=fvalue; for (byte v=1;v<=8;v++) { newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
+    curfreqVCO2[v]=curfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); oldfreqVCO2[v]=oldfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); vco2[v].frequency(curfreqVCO2[v]); } }
   if (control==12) { potFiltmixthru=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
     setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); }
   if (control==13) { potFiltmixlow=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
