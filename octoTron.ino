@@ -116,19 +116,19 @@ AudioConnection          patchCord100(mix14, 0, mix18, 0);
 AudioControlSGTL5000     sgtl5000_1;
 
 // mount voices for polyphony
-byte voiceTone[9]; byte voiceAge[9]; byte currentAge=8;
+byte voiceTone[9], voiceAge[9], currentAge=8;
 // mixing filters
-float potFiltmixthru; float potFiltmixlow; float potFiltmixband; float potFiltmixhigh; float potFiltmixsum;
+float potFiltmixthru, potFiltmixlow, potFiltmixband, potFiltmixhigh, potFiltmixsum;
 // velocity
-float potVCOamp; float veloVCO[9];
+float potVCOamp, veloVCO[9];
 // frequency shift vco2
 float potVCO2freq;
 // glissando parameters
-float oldfreqVCO1[9]; float newfreqVCO1[9]; float curfreqVCO1[9];
-float oldfreqVCO2[9]; float newfreqVCO2[9]; float curfreqVCO2[9];
+float oldfreqVCO1[9], newfreqVCO1[9], curfreqVCO1[9];
+float oldfreqVCO2[9], newfreqVCO2[9], curfreqVCO2[9];
 Metro glissando = Metro(5); float potGlissspeed; byte lastVoice;
 // to prevent restart oscillator
-byte waveVCO1; byte waveVCO2; byte waveLFOvco; byte waveLFOfilt;
+byte waveVCO1, waveVCO2, waveLFOvco, waveLFOfilt;
 
 void setup() {
   Serial1.begin(31250,SERIAL_8N1);
@@ -151,7 +151,7 @@ void setup() {
   delay(1000); }
 
 void loop() {
-  byte MIDIinA; static byte MIDIstatusA=0; static byte MIDIchannelA=0; static byte MIDIpara1A=0; static byte MIDIpara2A=0;
+  byte MIDIinA; static byte MIDIstatusA=0, MIDIchannelA=0, MIDIpara1A=0, MIDIpara2A=0;
   if (Serial1.available() > 0) { MIDIinA = Serial1.read();
     if ((MIDIinA & 128) == 128) { MIDIstatusA=MIDIinA & 240; MIDIchannelA=MIDIinA & 15; MIDIpara1A=255; MIDIpara2A=255; } else {
     if (MIDIpara1A==255) { MIDIpara1A=MIDIinA; } else if (MIDIpara2A==255) { MIDIpara2A=MIDIinA;
@@ -161,7 +161,7 @@ void loop() {
       // if (MIDIstatusA==0xE0) { MIDIsetPitchbend(MIDIchannelA,MIDIpara1A+(128*MIDIpara2A)); }
       MIDIpara1A=255; MIDIpara2A=255; } } }
 
-  byte MIDIinB; static byte MIDIstatusB=0; static byte MIDIchannelB=0; static byte MIDIpara1B=0; static byte MIDIpara2B=0;
+  byte MIDIinB; static byte MIDIstatusB=0, MIDIchannelB=0, MIDIpara1B=0, MIDIpara2B=0;
   if (Serial3.available() > 0) { MIDIinB = Serial3.read();
     if ((MIDIinB & 128) == 128) { MIDIstatusB=MIDIinB & 240; MIDIchannelB=MIDIinB & 15; MIDIpara1B=255; MIDIpara2B=255; } else {
     if (MIDIpara1B==255) { MIDIpara1B=MIDIinB; } else if (MIDIpara2B==255) { MIDIpara2B=MIDIinB;
@@ -203,12 +203,12 @@ void doGlissando() {
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); } } }
 
 void MIDIsetControl(byte channel, byte control, byte value) {
-  float fvalue; fvalue=float(value)/127;
+  float fvalue, lvalue; fvalue=float(value)/127; lvalue=pow(fvalue,2);
   if (control==0) { setAHDSRattack(fvalue*1500); }
   if (control==1) { setAHDSRhold(fvalue*1500); }
   if (control==2) { setAHDSRdecay(fvalue*1500); }
   if (control==3) { setAHDSRsustain(fvalue); }
-  if (control==4) { setAHDSRrelease(fvalue*1500); }
+  if (control==4) { setAHDSRrelease(fvalue*5000); }
   if (control==7) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } }
   if (control==8) {
     if ((value&96)==0) { if (waveVCO1 != WAVEFORM_SINE) { setVCO1wave(WAVEFORM_SINE); waveVCO1=WAVEFORM_SINE; } }
@@ -254,7 +254,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
 void MIDIsetPitchbend(byte channel, word pitch) { }
 
 byte mountVoice(byte tone) {
-  byte voice=255; byte age=0;
+  byte voice=255, age=0;
   if (voiceTone[1] == 255 and (age == 0 or voiceAge[1] < age)) { voice=1; age=voiceAge[1]; }
   if (voiceTone[2] == 255 and (age == 0 or voiceAge[2] < age)) { voice=2; age=voiceAge[2]; }
   if (voiceTone[3] == 255 and (age == 0 or voiceAge[3] < age)) { voice=3; age=voiceAge[3]; }
