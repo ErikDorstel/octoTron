@@ -126,9 +126,14 @@ float potVCO2freq;
 // glissando parameters
 float oldfreqVCO1[9], newfreqVCO1[9], curfreqVCO1[9];
 float oldfreqVCO2[9], newfreqVCO2[9], curfreqVCO2[9];
-Metro glissando = Metro(5); float potGlissspeed; byte lastVoice;
+float potGlissspeed; byte lastVoice;
 // to prevent restart oscillator
 byte waveVCO1, waveVCO2, waveLFOvco, waveLFOfilt;
+// arpeggiator parameters
+byte arpMode[100], arpChannel[100], arpTone[100], arpVelo[100]; unsigned long arpTime[100];
+float potArpspeed; byte potArpmode, voiceUsage;
+// timer for glissando and arpeggiator
+Metro timer = Metro(5);
 
 void setup() {
   Serial1.begin(31250,SERIAL_8N1);
@@ -171,9 +176,12 @@ void loop() {
       if (MIDIstatusB==0xE0) { MIDIsetPitchbend(MIDIchannelB,MIDIpara1B+(128*MIDIpara2B)); }
       MIDIpara1B=255; MIDIpara2B=255; } } }
       
-  if (glissando.check() == 1 and potGlissspeed > 1) { doGlissando(); } }
+  if (timer.check() == 1) { if (potGlissspeed > 1) { doGlissando(); } doArpeggiator(); } }
 
 void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
+  if (potArpspeed<500) { setArpeggiator(1,channel,tone,velocity); } else { dostartPlayNote(channel, tone, velocity); } }
+
+void dostartPlayNote(byte channel, byte tone, byte velocity) {
   byte voice=255; voice=mountVoice(tone);
   if (voice!=255) {
     AudioNoInterrupts();
@@ -183,17 +191,20 @@ void MIDIsetNoteOn(byte channel, byte tone, byte velocity) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
       curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice];
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
-      glissando.interval(5); glissando.reset(); }
+      timer.interval(5); timer.reset(); }
     else {
       curfreqVCO1[voice]=newfreqVCO1[voice]; oldfreqVCO1[voice]=newfreqVCO1[voice];
       curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice];
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); }
     veloVCO[voice]=(float(velocity)/127*0.9)+0.1; vco1[voice].amplitude(veloVCO[voice]*potVCOamp); vco2[voice].amplitude(veloVCO[voice]*potVCOamp);
     AudioInterrupts();
-    ahdsr[voice].noteOn(); lastVoice=voice; } }
+    ahdsr[voice].noteOn(); lastVoice=voice; voiceUsage++; } }
 
 void MIDIsetNoteOff(byte channel, byte tone, byte velocity) {
-  byte voice=255; voice=unmountVoice(tone); if (voice!=255) { ahdsr[voice].noteOff(); } }
+  if (potArpspeed<500) { setArpeggiator(2,channel,tone,velocity); } else { dostopPlayNote(channel, tone, velocity); } }
+
+void dostopPlayNote(byte channel, byte tone, byte velocity) {
+  byte voice=255; voice=unmountVoice(tone); if (voice!=255) { ahdsr[voice].noteOff(); voiceUsage--; } }
 
 void doGlissando() {
   for (byte voice=1;voice<=8;voice++) {
@@ -202,6 +213,29 @@ void doGlissando() {
       curfreqVCO2[voice]=curfreqVCO2[voice]*pow(newfreqVCO2[voice]/oldfreqVCO2[voice],(1/potGlissspeed));
       vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); } } }
 
+void setArpeggiator(byte mode, byte channel, byte tone, byte velocity) {
+  byte arpIndex; byte arpToneseq[3];
+  if ((potArpmode&96)==0) { arpToneseq[0]=0; arpToneseq[1]=4; arpToneseq[2]=7; }
+  if ((potArpmode&96)==32) { arpToneseq[0]=0; arpToneseq[1]=3; arpToneseq[2]=7; }
+  if ((potArpmode&96)==64) { arpToneseq[0]=7; arpToneseq[1]=4; arpToneseq[2]=0; }
+  if ((potArpmode&96)==96) { arpToneseq[0]=7; arpToneseq[1]=3; arpToneseq[2]=0; }
+  if (mode==1) { dostartPlayNote(channel,tone+arpToneseq[0],velocity); }
+  if (mode==2) { dostopPlayNote(channel,tone+arpToneseq[0],velocity); }
+  arpIndex=freeArpIndex(); if (arpIndex < 99) {
+    arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+potArpspeed; arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[1]; arpVelo[arpIndex]=velocity; }
+  arpIndex=freeArpIndex(); if (arpIndex < 99) {
+    arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+(2*potArpspeed); arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[2]; arpVelo[arpIndex]=velocity; } }
+
+byte freeArpIndex() { byte arpIndex=0; while (arpMode[arpIndex] != 0 and arpIndex < 99) { arpIndex++; } return arpIndex; }
+
+void doArpeggiator() {
+  byte arpIndex;
+  for (arpIndex=0;arpIndex<99;arpIndex++) {
+    if (arpMode[arpIndex] != 0) {
+      if (long(millis()-arpTime[arpIndex]) >= 0) {
+        if (arpMode[arpIndex] == 1) { arpMode[arpIndex]=0; dostartPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); }
+        if (arpMode[arpIndex] == 2) { arpMode[arpIndex]=0; dostopPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } } } } }
+
 void MIDIsetControl(byte channel, byte control, byte value) {
   float fvalue, lvalue; fvalue=float(value)/127; lvalue=pow(fvalue,2);
   if (control==0) { setAHDSRattack(fvalue*1500); }
@@ -209,7 +243,9 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==2) { setAHDSRdecay(fvalue*1500); }
   if (control==3) { setAHDSRsustain(fvalue); }
   if (control==4) { setAHDSRrelease(fvalue*5000); }
-  if (control==7) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } }
+  if (control==5) { if (voiceUsage==0) { potArpmode=value; } }
+  if (control==6) { if (voiceUsage==0) { potArpspeed=fvalue*500; } }
+  if (control==7) { potGlissspeed=(fvalue*99)+1; }
   if (control==8) {
     if ((value&96)==0) { if (waveVCO1 != WAVEFORM_SINE) { setVCO1wave(WAVEFORM_SINE); waveVCO1=WAVEFORM_SINE; } }
     if ((value&96)==32) { if (waveVCO1 != WAVEFORM_SAWTOOTH) { setVCO1wave(WAVEFORM_SAWTOOTH); waveVCO1=WAVEFORM_SAWTOOTH; } }
@@ -249,7 +285,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==27) { setLFOfiltfreq(fvalue*10); }
   if (control==28) { setFiltfreq(fvalue*1000); }
   if (control==29) { setFiltres((fvalue*5.7)-0.7); }
-  if (control==31) { potGlissspeed=(fvalue*99)+1; } }
+  if (control==31) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } } }
 
 void MIDIsetPitchbend(byte channel, word pitch) { }
 
