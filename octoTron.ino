@@ -189,13 +189,11 @@ void dostartPlayNote(byte channel, byte tone, byte velocity) {
     newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*pow(2,(potVCO2freq*2)-1);
     if (potGlissspeed > 1) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
-      curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice];
-      vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
-      timer.interval(5); timer.reset(); }
+      curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice]; }
     else {
       curfreqVCO1[voice]=newfreqVCO1[voice]; oldfreqVCO1[voice]=newfreqVCO1[voice];
-      curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice];
-      vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]); }
+      curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice]; }
+    vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
     veloVCO[voice]=(float(velocity)/127*0.9)+0.1; vco1[voice].amplitude(veloVCO[voice]*potVCOamp); vco2[voice].amplitude(veloVCO[voice]*potVCOamp);
     AudioInterrupts();
     ahdsr[voice].noteOn(); lastVoice=voice; voiceUsage++; } }
@@ -221,16 +219,19 @@ void setArpeggiator(byte mode, byte channel, byte tone, byte velocity) {
   if ((potArpmode&96)==96) { arpToneseq[0]=7; arpToneseq[1]=3; arpToneseq[2]=0; }
   if (mode==1) { dostartPlayNote(channel,tone+arpToneseq[0],velocity); }
   if (mode==2) { dostopPlayNote(channel,tone+arpToneseq[0],velocity); }
-  arpIndex=freeArpIndex(); if (arpIndex < 99) {
-    arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+potArpspeed; arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[1]; arpVelo[arpIndex]=velocity; }
-  arpIndex=freeArpIndex(); if (arpIndex < 99) {
-    arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+(2*potArpspeed); arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[2]; arpVelo[arpIndex]=velocity; } }
+  if (potArpspeed == 0) {
+    if (mode==1) { dostartPlayNote(channel,tone+arpToneseq[1],velocity); dostartPlayNote(channel,tone+arpToneseq[2],velocity); }
+    if (mode==2) { dostopPlayNote(channel,tone+arpToneseq[1],velocity); dostopPlayNote(channel,tone+arpToneseq[2],velocity); } }
+  else {
+    arpIndex=freeArpIndex(); if (arpIndex < 99) {
+      arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+potArpspeed; arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[1]; arpVelo[arpIndex]=velocity; }
+    arpIndex=freeArpIndex(); if (arpIndex < 99) {
+      arpMode[arpIndex]=mode; arpTime[arpIndex]=millis()+(2*potArpspeed); arpChannel[arpIndex]=channel; arpTone[arpIndex]=tone+arpToneseq[2]; arpVelo[arpIndex]=velocity; } } }
 
 byte freeArpIndex() { byte arpIndex=0; while (arpMode[arpIndex] != 0 and arpIndex < 99) { arpIndex++; } return arpIndex; }
 
 void doArpeggiator() {
-  byte arpIndex;
-  for (arpIndex=0;arpIndex<99;arpIndex++) {
+  for (byte arpIndex=0;arpIndex<99;arpIndex++) {
     if (arpMode[arpIndex] != 0) {
       if (long(millis()-arpTime[arpIndex]) >= 0) {
         if (arpMode[arpIndex] == 1) { arpMode[arpIndex]=0; dostartPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); }
