@@ -285,7 +285,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
   if (control==26) { setLFOfiltamp(fvalue); }
   if (control==27) { setLFOfiltfreq(fvalue*10); }
   if (control==28) { setFiltfreq(fvalue*1000); }
-  if (control==29) { setFiltres((fvalue*5.7)-0.7); }
+  if (control==29) { setFiltres((fvalue*4.3)+0.7); }
   if (control==31) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } } }
 
 void MIDIsetPitchbend(byte channel, word pitch) { }
