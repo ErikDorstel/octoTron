@@ -144,7 +144,7 @@ void setup() {
   sgtl5000_1.enable(); sgtl5000_1.volume(0.8); sgtl5000_1.unmuteLineout(); sgtl5000_1.lineOutLevel(29);
   mix14.gain(0,0.25); mix14.gain(1,0.25); mix14.gain(2,0.25); mix14.gain(3,0.25);
   mix58.gain(0,0.25); mix58.gain(1,0.25); mix58.gain(2,0.25); mix58.gain(3,0.25);
-  mix18.gain(0,0.5); mix18.gain(1,0.5); mix18.gain(2,0); mix18.gain(3,0);
+  mix18.gain(0,5); mix18.gain(1,5); mix18.gain(2,0); mix18.gain(3,0);
   setVCOmix(0.5,0.5);
   setFiltmix(1,0,0,0);
   setAHDSR(0,500,500,1,500);
@@ -238,7 +238,7 @@ void doArpeggiator() {
         if (arpMode[arpIndex] == 2) { arpMode[arpIndex]=0; dostopPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } } } } }
 
 void MIDIsetControl(byte channel, byte control, byte value) {
-  float fvalue, lvalue; fvalue=float(value)/127; lvalue=pow(fvalue,2);
+  float fvalue, lvalue; fvalue=float(value)/127; lvalue=pow(fvalue,3);
   if (control==0) { setAHDSRattack(fvalue*1500); }
   if (control==1) { setAHDSRhold(fvalue*1500); }
   if (control==2) { setAHDSRdecay(fvalue*1500); }
@@ -275,7 +275,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     if ((value&96)==96) { if (waveLFOvco != WAVEFORM_TRIANGLE) { setLFOvcowave(WAVEFORM_TRIANGLE); waveLFOvco=WAVEFORM_TRIANGLE; } } }
   if (control==17) { AudioNoInterrupts(); setLFOvcophase(fvalue*360); AudioInterrupts(); }
   if (control==18) { setLFOvcoamp(fvalue); }
-  if (control==19) { setLFOvcofreq(fvalue*10); }
+  if (control==19) { setLFOvcofreq(lvalue*100); }
   if (control==24) {
     if ((value&96)==0) { if (waveLFOfilt != WAVEFORM_SINE) { setLFOfiltwave(WAVEFORM_SINE); waveLFOfilt=WAVEFORM_SINE; } }
     if ((value&96)==32) { if (waveLFOfilt != WAVEFORM_SAWTOOTH) { setLFOfiltwave(WAVEFORM_SAWTOOTH); waveLFOfilt=WAVEFORM_SAWTOOTH; } }
@@ -283,8 +283,8 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     if ((value&96)==96) { if (waveLFOfilt != WAVEFORM_TRIANGLE) { setLFOfiltwave(WAVEFORM_TRIANGLE); waveLFOfilt=WAVEFORM_TRIANGLE; } } }
   if (control==25) { AudioNoInterrupts(); setLFOfiltphase(fvalue*360); AudioInterrupts(); }
   if (control==26) { setLFOfiltamp(fvalue); }
-  if (control==27) { setLFOfiltfreq(fvalue*10); }
-  if (control==28) { setFiltfreq(fvalue*1000); }
+  if (control==27) { setLFOfiltfreq(lvalue*100); }
+  if (control==28) { setFiltfreq(lvalue*5000); }
   if (control==29) { setFiltres((fvalue*4.3)+0.7); }
   if (control==31) { potVCOamp=fvalue; for (byte v=1;v<=8;v++) { vco1[v].amplitude(veloVCO[v]*potVCOamp); vco2[v].amplitude(veloVCO[v]*potVCOamp); } } }
 
