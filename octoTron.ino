@@ -81,6 +81,7 @@ void dostartPlayNote(byte channel, byte tone, byte velocity) {
       curfreqVCO1[voice]=newfreqVCO1[voice]; oldfreqVCO1[voice]=newfreqVCO1[voice];
       curfreqVCO2[voice]=newfreqVCO2[voice]; oldfreqVCO2[voice]=newfreqVCO2[voice]; }
     vco1[voice].frequency(curfreqVCO1[voice]); vco2[voice].frequency(curfreqVCO2[voice]);
+    vco1[voice].restart(); vco2[voice].restart();
     veloVCO[voice]=(float(velocity)/127*0.9)+0.1; mixvco[voice].gain(0,(1-potVCOaddmul)*(1-potVCOratio)*veloVCO[voice]*potVCOamp);
     mixvco[voice].gain(1,(1-potVCOaddmul)*potVCOratio*veloVCO[voice]*potVCOamp); mixvco[voice].gain(2,potVCOaddmul*veloVCO[voice]*potVCOamp);
     AudioInterrupts();
@@ -147,16 +148,10 @@ void MIDIsetControl(byte channel, byte control, byte value) {
       if ((value&96)==64) { if (waveVCO2 != WAVEFORM_SQUARE) { setVCO2wave(WAVEFORM_SQUARE); waveVCO2=WAVEFORM_SQUARE; } } else
       if ((value&96)==96) { if (waveVCO2 != WAVEFORM_TRIANGLE) { setVCO2wave(WAVEFORM_TRIANGLE); waveVCO2=WAVEFORM_TRIANGLE; } } break;
     case 10: potVCOratio=fvalue; setVolume(); break;
-    case 11: potVCO2freq=fvalue; for (byte v=1;v<=8;v++) { newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
+    case 11: potVCOaddmul=fvalue; setVolume(); break;
+    case 12: potVCO2freq=fvalue; for (byte v=1;v<=8;v++) { newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
       curfreqVCO2[v]=curfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); oldfreqVCO2[v]=oldfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); vco2[v].frequency(curfreqVCO2[v]); } break;
-    case 12: potFiltmixthru=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 13: potFiltmixlow=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 14: potFiltmixband=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 15: potFiltmixhigh=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
+    case 13: potVCOamp=fvalue; setVolume(); break;
     case 16:
       if ((value&96)==0) { if (waveLFOvco != WAVEFORM_SINE) { setLFOvcowave(WAVEFORM_SINE); waveLFOvco=WAVEFORM_SINE; } } else
       if ((value&96)==32) { if (waveLFOvco != WAVEFORM_SAWTOOTH) { setLFOvcowave(WAVEFORM_SAWTOOTH); waveLFOvco=WAVEFORM_SAWTOOTH; } } else
@@ -165,6 +160,14 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     case 17: AudioNoInterrupts(); setLFOvcophase(fvalue*360); AudioInterrupts(); break;
     case 18: setLFOvcoamp(fvalue); break;
     case 19: setLFOvcofreq(lvalue*100); break;
+    case 20: potFiltmixthru=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
+      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
+    case 21: potFiltmixlow=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
+      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
+    case 22: potFiltmixband=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
+      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
+    case 23: potFiltmixhigh=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
+      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
     case 24:
       if ((value&96)==0) { if (waveLFOfilt != WAVEFORM_SINE) { setLFOfiltwave(WAVEFORM_SINE); waveLFOfilt=WAVEFORM_SINE; } } else
       if ((value&96)==32) { if (waveLFOfilt != WAVEFORM_SAWTOOTH) { setLFOfiltwave(WAVEFORM_SAWTOOTH); waveLFOfilt=WAVEFORM_SAWTOOTH; } } else
@@ -174,9 +177,7 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     case 26: setLFOfiltamp(fvalue); break;
     case 27: setLFOfiltfreq(lvalue*100); break;
     case 28: setFiltfreq(lvalue*5000); break;
-    case 29: setFiltres((fvalue*4.3)+0.7); break;
-    case 30: potVCOaddmul=fvalue; setVolume(); break;
-    case 31: potVCOamp=fvalue; setVolume(); break; } }
+    case 29: setFiltres((fvalue*4.3)+0.7); break; } }
 
 void MIDIsetPitchbend(byte channel, word pitch) { }
 
