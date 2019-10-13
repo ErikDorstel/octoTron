@@ -73,7 +73,7 @@ void dostartPlayNote(byte channel, byte tone, byte velocity) {
   if (voice!=255) {
     AudioNoInterrupts();
     lfovco[voice].restart(); lfofilt[voice].restart();
-    newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*pow(2,(potVCO2freq*2)-1);
+    newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*getVCO2shift();
     if (potGlissspeed > 1) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
       curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice]; }
@@ -126,6 +126,8 @@ void doArpeggiator() {
         if (arpMode[arpIndex] == 1) { arpMode[arpIndex]=0; dostartPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } else
         if (arpMode[arpIndex] == 2) { arpMode[arpIndex]=0; dostopPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } } } } }
 
+float getVCO2shift() { return(pow(2,pow((potVCO2freq*2)-1,3))); }
+
 void MIDIsetControl(byte channel, byte control, byte value) {
   float fvalue=float(value)/127, lvalue=pow(fvalue,3);
   switch (control) {
@@ -149,8 +151,8 @@ void MIDIsetControl(byte channel, byte control, byte value) {
       if ((value&96)==96) { if (waveVCO2 != WAVEFORM_TRIANGLE) { setVCO2wave(WAVEFORM_TRIANGLE); waveVCO2=WAVEFORM_TRIANGLE; } } break;
     case 10: potVCOratio=fvalue; setVolume(); break;
     case 11: potVCOaddmul=fvalue; setVolume(); break;
-    case 12: potVCO2freq=fvalue; for (byte v=1;v<=8;v++) { newfreqVCO2[v]=newfreqVCO1[v]*pow(2,(potVCO2freq*2)-1);
-      curfreqVCO2[v]=curfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); oldfreqVCO2[v]=oldfreqVCO1[v]*pow(2,(potVCO2freq*2)-1); vco2[v].frequency(curfreqVCO2[v]); } break;
+    case 12: potVCO2freq=fvalue; for (byte v=1;v<=8;v++) { float VCO2shift=getVCO2shift(); newfreqVCO2[v]=newfreqVCO1[v]*VCO2shift;
+      curfreqVCO2[v]=curfreqVCO1[v]*VCO2shift; oldfreqVCO2[v]=oldfreqVCO1[v]*VCO2shift; vco2[v].frequency(curfreqVCO2[v]); } break;
     case 13: potVCOamp=fvalue; setVolume(); break;
     case 16:
       if ((value&96)==0) { if (waveLFOvco != WAVEFORM_SINE) { setLFOvcowave(WAVEFORM_SINE); waveLFOvco=WAVEFORM_SINE; } } else
