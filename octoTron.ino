@@ -6,8 +6,8 @@ const bool logging=true;
 
 // mount voices for polyphony
 byte voiceTone[9], voiceAge[9], currentAge=8;
-// mixing filters
-float potFiltmixthru, potFiltmixlow, potFiltmixband, potFiltmixhigh, potFiltmixsum;
+// mixing vcf
+float potVCFmixthru, potVCFmixlow, potVCFmixband, potVCFmixhigh, potVCFmixsum;
 // velocity
 float potVCOamp, veloVCO[9], potVCOratio, potVCOaddmul;
 // frequency shift vco2
@@ -17,7 +17,7 @@ float oldfreqVCO1[9], newfreqVCO1[9], curfreqVCO1[9];
 float oldfreqVCO2[9], newfreqVCO2[9], curfreqVCO2[9];
 float potGlissspeed; byte lastVoice;
 // to prevent restart oscillator
-byte waveVCO1, waveVCO2, waveLFOvco, waveLFOfilt;
+byte waveVCO1, waveVCO2, waveLFOvco, waveLFOvcf;
 // arpeggiator parameters
 byte arpMode[100], arpChannel[100], arpTone[100], arpVelo[100]; unsigned long arpTime[100];
 float potArpspeed; byte potArpmode, voiceUsage;
@@ -36,13 +36,13 @@ void setup() {
   mix58.gain(0,0.25); mix58.gain(1,0.25); mix58.gain(2,0.25); mix58.gain(3,0.25);
   mix18.gain(0,5); mix18.gain(1,5); mix18.gain(2,0); mix18.gain(3,0);
   setVCOmix(0.33,0.33,0.33);
-  setFiltmix(1,0,0,0);
+  setVCFmix(1,0,0,0);
   setAHDSR(0,500,500,1,500);
-  setFilt(440,4,7);
+  setVCF(440,4,7);
   setVCO1(1,440,WAVEFORM_SINE,1);
   setVCO2(1,440,WAVEFORM_SINE,1);
   setLFOvco(0,10,WAVEFORM_SINE);
-  setLFOfilt(0,10,WAVEFORM_SINE);
+  setLFOvcf(0,10,WAVEFORM_SINE);
   delay(1000); }
 
 void loop() {
@@ -72,7 +72,7 @@ void dostartPlayNote(byte channel, byte tone, byte velocity) {
   byte voice=mountVoice(tone);
   if (voice!=255) {
     AudioNoInterrupts();
-    lfovco[voice].restart(); lfofilt[voice].restart();
+    lfovco[voice].restart(); lfovcf[voice].restart();
     newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*getVCO2shift();
     if (potGlissspeed > 1) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
@@ -162,24 +162,24 @@ void MIDIsetControl(byte channel, byte control, byte value) {
     case 17: AudioNoInterrupts(); setLFOvcophase(fvalue*360); AudioInterrupts(); break;
     case 18: setLFOvcoamp(fvalue); break;
     case 19: setLFOvcofreq(lvalue*100); break;
-    case 20: potFiltmixthru=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 21: potFiltmixlow=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 22: potFiltmixband=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
-    case 23: potFiltmixhigh=fvalue; potFiltmixsum=potFiltmixthru+potFiltmixlow+potFiltmixband+potFiltmixhigh;
-      setFiltmix(potFiltmixthru/potFiltmixsum,potFiltmixlow/potFiltmixsum,potFiltmixband/potFiltmixsum,potFiltmixhigh/potFiltmixsum); break;
+    case 20: potVCFmixthru=fvalue; potVCFmixsum=potVCFmixthru+potVCFmixlow+potVCFmixband+potVCFmixhigh;
+      setVCFmix(potVCFmixthru/potVCFmixsum,potVCFmixlow/potVCFmixsum,potVCFmixband/potVCFmixsum,potVCFmixhigh/potVCFmixsum); break;
+    case 21: potVCFmixlow=fvalue; potVCFmixsum=potVCFmixthru+potVCFmixlow+potVCFmixband+potVCFmixhigh;
+      setVCFmix(potVCFmixthru/potVCFmixsum,potVCFmixlow/potVCFmixsum,potVCFmixband/potVCFmixsum,potVCFmixhigh/potVCFmixsum); break;
+    case 22: potVCFmixband=fvalue; potVCFmixsum=potVCFmixthru+potVCFmixlow+potVCFmixband+potVCFmixhigh;
+      setVCFmix(potVCFmixthru/potVCFmixsum,potVCFmixlow/potVCFmixsum,potVCFmixband/potVCFmixsum,potVCFmixhigh/potVCFmixsum); break;
+    case 23: potVCFmixhigh=fvalue; potVCFmixsum=potVCFmixthru+potVCFmixlow+potVCFmixband+potVCFmixhigh;
+      setVCFmix(potVCFmixthru/potVCFmixsum,potVCFmixlow/potVCFmixsum,potVCFmixband/potVCFmixsum,potVCFmixhigh/potVCFmixsum); break;
     case 24:
-      if ((value&96)==0) { if (waveLFOfilt != WAVEFORM_SINE) { setLFOfiltwave(WAVEFORM_SINE); waveLFOfilt=WAVEFORM_SINE; } } else
-      if ((value&96)==32) { if (waveLFOfilt != WAVEFORM_SAWTOOTH) { setLFOfiltwave(WAVEFORM_SAWTOOTH); waveLFOfilt=WAVEFORM_SAWTOOTH; } } else
-      if ((value&96)==64) { if (waveLFOfilt != WAVEFORM_SQUARE) { setLFOfiltwave(WAVEFORM_SQUARE); waveLFOfilt=WAVEFORM_SQUARE; } } else
-      if ((value&96)==96) { if (waveLFOfilt != WAVEFORM_TRIANGLE) { setLFOfiltwave(WAVEFORM_TRIANGLE); waveLFOfilt=WAVEFORM_TRIANGLE; } } break;
-    case 25: AudioNoInterrupts(); setLFOfiltphase(fvalue*360); AudioInterrupts(); break;
-    case 26: setLFOfiltamp(fvalue); break;
-    case 27: setLFOfiltfreq(lvalue*100); break;
-    case 28: setFiltfreq(lvalue*5000); break;
-    case 29: setFiltres((fvalue*4.3)+0.7); break; } }
+      if ((value&96)==0) { if (waveLFOvcf != WAVEFORM_SINE) { setLFOvcfwave(WAVEFORM_SINE); waveLFOvcf=WAVEFORM_SINE; } } else
+      if ((value&96)==32) { if (waveLFOvcf != WAVEFORM_SAWTOOTH) { setLFOvcfwave(WAVEFORM_SAWTOOTH); waveLFOvcf=WAVEFORM_SAWTOOTH; } } else
+      if ((value&96)==64) { if (waveLFOvcf != WAVEFORM_SQUARE) { setLFOvcfwave(WAVEFORM_SQUARE); waveLFOvcf=WAVEFORM_SQUARE; } } else
+      if ((value&96)==96) { if (waveLFOvcf != WAVEFORM_TRIANGLE) { setLFOvcfwave(WAVEFORM_TRIANGLE); waveLFOvcf=WAVEFORM_TRIANGLE; } } break;
+    case 25: AudioNoInterrupts(); setLFOvcfphase(fvalue*360); AudioInterrupts(); break;
+    case 26: setLFOvcfamp(fvalue); break;
+    case 27: setLFOvcffreq(lvalue*100); break;
+    case 28: setVCFfreq(lvalue*5000); break;
+    case 29: setVCFres((fvalue*4.3)+0.7); break; } }
 
 void MIDIsetPitchbend(byte channel, word pitch) { }
 
@@ -234,17 +234,17 @@ void setLFOvcofreq(float f) { for (byte v=1;v<=8;v++) { lfovco[v].frequency(f); 
 void setLFOvcowave(byte w) { for (byte v=1;v<=8;v++) { lfovco[v].begin(w); } }
 void setLFOvcophase(float p) { for (byte v=1;v<=8;v++) { lfovco[v].phase(p); } }
 
-void setLFOfilt(float a, float f, byte w) { for (byte v=1;v<=8;v++) { lfofilt[v].begin(a,f,w); } }
-void setLFOfiltamp(float a) { for (byte v=1;v<=8;v++) { lfofilt[v].amplitude(a); } }
-void setLFOfiltfreq(float f) { for (byte v=1;v<=8;v++) { lfofilt[v].frequency(f); } }
-void setLFOfiltwave(byte w) { for (byte v=1;v<=8;v++) { lfofilt[v].begin(w); } }
-void setLFOfiltphase(float p) { for (byte v=1;v<=8;v++) { lfofilt[v].phase(p); } }
+void setLFOvcf(float a, float f, byte w) { for (byte v=1;v<=8;v++) { lfovcf[v].begin(a,f,w); } }
+void setLFOvcfamp(float a) { for (byte v=1;v<=8;v++) { lfovcf[v].amplitude(a); } }
+void setLFOvcffreq(float f) { for (byte v=1;v<=8;v++) { lfovcf[v].frequency(f); } }
+void setLFOvcfwave(byte w) { for (byte v=1;v<=8;v++) { lfovcf[v].begin(w); } }
+void setLFOvcfphase(float p) { for (byte v=1;v<=8;v++) { lfovcf[v].phase(p); } }
 
-void setFilt(float f,float r, float o) { for (byte v=1;v<=8;v++) { filt[v].frequency(f); filt[v].resonance(r); filt[v].octaveControl(o); } }
-void setFiltfreq(float f) { for (byte v=1;v<=8;v++) { filt[v].frequency(f); } }
-void setFiltres(float r) { for (byte v=1;v<=8;v++) { filt[v].resonance(r); } }
+void setVCF(float f,float r, float o) { for (byte v=1;v<=8;v++) { vcf[v].frequency(f); vcf[v].resonance(r); vcf[v].octaveControl(o); } }
+void setVCFfreq(float f) { for (byte v=1;v<=8;v++) { vcf[v].frequency(f); } }
+void setVCFres(float r) { for (byte v=1;v<=8;v++) { vcf[v].resonance(r); } }
 
-void setFiltmix(float a, float b, float c, float d) { for (byte v=1;v<=8;v++) { mixfilt[v].gain(0,a); mixfilt[v].gain(1,b); mixfilt[v].gain(2,c); mixfilt[v].gain(3,d); } }
+void setVCFmix(float a, float b, float c, float d) { for (byte v=1;v<=8;v++) { mixvcf[v].gain(0,a); mixvcf[v].gain(1,b); mixvcf[v].gain(2,c); mixvcf[v].gain(3,d); } }
 
 void logUtil() {
   Serial.print("Memory: "); Serial.print(AudioMemoryUsage()); Serial.print("/"); Serial.print(AudioMemoryUsageMax());
