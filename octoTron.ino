@@ -73,7 +73,7 @@ void dostartPlayNote(byte channel, byte tone, byte velocity) {
   if (voice!=255) {
     AudioNoInterrupts();
     lfovco[voice].restart(); lfovcf[voice].restart();
-    newfreqVCO1[voice]=(pow(2,(float(tone)-69)/12))*440; newfreqVCO2[voice]=newfreqVCO1[voice]*getVCO2shift();
+    newfreqVCO1[voice]=getMIDIfreq(tone); newfreqVCO2[voice]=newfreqVCO1[voice]*getVCO2shift();
     if (potGlissspeed > 1) {
       curfreqVCO1[voice]=newfreqVCO1[lastVoice]; oldfreqVCO1[voice]=newfreqVCO1[lastVoice];
       curfreqVCO2[voice]=newfreqVCO2[lastVoice]; oldfreqVCO2[voice]=newfreqVCO2[lastVoice]; }
@@ -125,8 +125,6 @@ void doArpeggiator() {
       if (long(millis()-arpTime[arpIndex]) >= 0) {
         if (arpMode[arpIndex] == 1) { arpMode[arpIndex]=0; dostartPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } else
         if (arpMode[arpIndex] == 2) { arpMode[arpIndex]=0; dostopPlayNote(arpChannel[arpIndex], arpTone[arpIndex], arpVelo[arpIndex]); } } } } }
-
-float getVCO2shift() { return(pow(2,pow((potVCO2freq*2)-1,3))); }
 
 void MIDIsetControl(byte channel, byte control, byte value) {
   float fvalue=float(value)/127, lvalue=pow(fvalue,3);
@@ -205,6 +203,10 @@ byte unmountVoice(byte tone) {
   if (voiceTone[6] == tone) { voiceAge[6]=++currentAge; voiceTone[6]=255; return 6; } else
   if (voiceTone[7] == tone) { voiceAge[7]=++currentAge; voiceTone[7]=255; return 7; } else
   if (voiceTone[8] == tone) { voiceAge[8]=++currentAge; voiceTone[8]=255; return 8; } else { return 255; } }
+
+float getMIDIfreq(byte tone) { return((pow(2,(float(tone)-69)/12))*440); }
+
+float getVCO2shift() { return(pow(2,pow((potVCO2freq*2)-1,3))); }
 
 void setVolume() { for (byte v=1;v<=8;v++) { mixvco[v].gain(0,(1-potVCOaddmul)*(1-potVCOratio)*veloVCO[v]*potVCOamp);
   mixvco[v].gain(1,(1-potVCOaddmul)*potVCOratio*veloVCO[v]*potVCOamp); mixvco[v].gain(2,potVCOaddmul*veloVCO[v]*potVCOamp); } }
