@@ -206,7 +206,7 @@ byte unmountVoice(byte tone) {
 
 float getMIDIfreq(byte tone) { return((pow(2,(float(tone)-69)/12))*440); }
 
-float getVCO2shift() { return(pow(2,pow((potVCO2freq*2)-1,3))); }
+float getVCO2shift() { return(atan(potVCO2freq*12-6)/atan(6)/4+0.75); }
 
 void setVolume() { for (byte v=1;v<=8;v++) { mixvco[v].gain(0,(1-potVCOaddmul)*(1-potVCOratio)*veloVCO[v]*potVCOamp);
   mixvco[v].gain(1,(1-potVCOaddmul)*potVCOratio*veloVCO[v]*potVCOamp); mixvco[v].gain(2,potVCOaddmul*veloVCO[v]*potVCOamp); } }
