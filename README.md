@@ -21,3 +21,4 @@ The octoTron source code uses a new feature in the audio library. To restart an 
 The hardware used is very similar to https://github.com/ErikDorstel/stringFlow . The only difference is the use of a second MIDI In port. The octoTron Synthesizer use this second MIDI In port to connect a MIDI controller. The assigned MIDI controller numbers and the schematic are part of the documentation.
 
 [Example Video](https://www.youtube.com/watch?v=crX1zdYAdEI)
+[![IMAGE ALT TEXT HERE](http://www.dorstel.de/github/Teensy_3.6_Polyphonic_Synthesizer.png)](https://www.youtube.com/watch?v=crX1zdYAdEI)
